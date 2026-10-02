@@ -93,6 +93,7 @@ dialog{max-height:90vh;overflow:auto}
     <select id="cs"></select>
     <input id="dt" type="date">
     <select id="by"></select>
+    <input id="np" type="number" min="1" max="60" inputmode="numeric" placeholder="מס׳ תשלומים">
     <label class="chk full"><input type="checkbox" id="xx"> ⚡ הוצאה חריגה (חופשה, תיקון, ריהוט...) – לא נספרת בתקציב הקטגוריה</label>
     <button class="btn pri full" id="go">הוסף הוצאה</button>
   </div>
@@ -105,6 +106,7 @@ dialog{max-height:90vh;overflow:auto}
   <h2>🧾 הוצאות החודש</h2>
   <div id="ls"></div>
 </section>
+<section class="card" id="upc" style="display:none"><h2>📅 תשלומים קרובים</h2><div id="upl"></div></section>
 <section class="card"><h2>📈 השוואה בין חודשים</h2><div style="overflow-x:auto" id="cmp"></div></section>
 <div class="note" id="sync" style="text-align:center;margin-top:14px"></div>
 </div>
@@ -124,7 +126,7 @@ dialog{max-height:90vh;overflow:auto}
 const DEF={names:["פרדי","נויה"],each:6800,cats:[
 {id:"rent",e:"🏠",n:"שכירות",b:8000,t:"fixed"},{id:"fixed",e:"🧾",n:"הוצאות חובה קבועות",b:974,t:"fixed"},
 {id:"bills",e:"💡",n:"ארנונה + חשמל + מים + גז",b:905,t:"fixed"},{id:"vaad",e:"🏢",n:"ועד בית",b:360,t:"fixed"},
-{id:"super",e:"🛒",n:"סופר + דברים לבית",b:2300,t:"var"},{id:"gym",e:"🏋️",n:"הולמס פלייס",b:489,t:"fixed"},
+{id:"super",e:"🛒",n:"סופר + דברים לבית",b:2300,t:"var"},{id:"gym",e:"🏋️",n:"הולמס פלייס",b:433,t:"fixed"},
 {id:"save",e:"💰",n:"חיסכון / כרית בחשבון",b:500,t:"cushion"}]};
 const KW={rent:"שכירות|שכר דירה",bills:"ארנונה|חשמל|מים|גז|חברת החשמל",vaad:"ועד",super:"סופר|שופרסל|רמי לוי|מגה|ויקטורי|יוחננוף|טיב טעם|אושר עד|קשת טעמים|סופר-פארם|סופר פארם|בית",gym:"הולמס|חדר כושר|מנוי",save:"חיסכון|כרית",fixed:"ביטוח|טלפון|אינטרנט|סלולר"};
 const COL=["#6c4cf1","#22b07d","#f5a524","#0ea5e9","#ef4565","#14b8a6","#a855f7","#f97316","#84cc16","#ec4899"];
@@ -198,9 +200,18 @@ function render(){
   $("ls").innerHTML=ex.length?ex.map(e=>{
     const c=e.x?{e:"⚡",n:"חריגה"}:(cs.find(c=>c.id===e.cat)||{e:"❓",n:"אחר"});
     const d=e.date.split("-");
-    return `<div class="it"><div class="em">${c.e}</div><div class="m"><div>${esc(e.note||c.n)}${e.x?'<span class="tag">חריגה</span>':""}</div><small>${d[2]}/${d[1]} · ${esc(c.n)} · ${esc(e.by||"")}</small></div><b>${f(e.amount)}</b><button class="x" data-d="${e.id}">✕</button></div>`}).join(""):`<div class="empty">עוד אין הוצאות החודש 🎉</div>`;
-  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{if(confirm("למחוק את ההוצאה?"))delEx(b.dataset.d)});
+    return `<div class="it"><div class="em">${c.e}</div><div class="m"><div>${esc(e.note||c.n)}${e.x?'<span class="tag">חריגה</span>':""}${e.pn?`<span class="tag" style="background:var(--pri)">תשלום ${e.p}/${e.pn}</span>`:""}</div><small>${d[2]}/${d[1]} · ${esc(c.n)} · ${esc(e.by||"")}</small></div><b>${f(e.amount)}</b><button class="x" data-d="${e.id}">✕</button></div>`}).join(""):`<div class="empty">עוד אין הוצאות החודש 🎉</div>`;
+  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>delAsk(b.dataset.d));
+  const up=EX.filter(e=>e.pn&&(e.date||"").slice(0,7)>mon).sort((a,b)=>a.date.localeCompare(b.date)),gm={};
+  up.forEach(e=>{const k=e.date.slice(0,7);(gm[k]=gm[k]||[]).push(e)});
+  $("upc").style.display=up.length?"":"none";
+  $("upl").innerHTML=Object.keys(gm).map(k=>`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-weight:700"><span>${MN[+k.slice(5)-1]} ${k.slice(0,4)}</span><span>${f(sum(gm[k]))}</span></div>${gm[k].map(e=>`<div class="note" style="display:flex;justify-content:space-between;margin:2px 0"><span>${esc(e.note||"תשלום")} · תשלום ${e.p}/${e.pn}</span><span>${f(e.amount)}</span></div>`).join("")}</div>`).join("");
   $("cmp").innerHTML=cmp();
+}
+function delAsk(id){
+  const e=EX.find(x=>x.id===id);if(!e)return;
+  if(e.g&&confirm("זו הוצאה בתשלומים. למחוק את כל התשלומים שלה?")){EX.filter(x=>x.g===e.g).forEach(x=>delEx(x.id));return}
+  if(confirm(e.g?"למחוק רק את התשלום הזה?":"למחוק את ההוצאה?"))delEx(id);
 }
 function cmp(){
   const ms=[...new Set(EX.map(e=>(e.date||"").slice(0,7)).filter(x=>x&&x<=mon))].sort().slice(-4);
@@ -219,11 +230,18 @@ $("nt").oninput=()=>{
   const t=$("nt").value;if(!t||$("xx").checked)return;
   for(const c of S.cats){const k=KW[c.id];if(k&&new RegExp(k).test(t)){$("cs").value=c.id;return}}
 };
-$("go").onclick=()=>{
+function addM(d,k){const [y,m,dd]=d.split("-").map(Number),t=new Date(y,m-1+k,1),dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(Math.min(dd,dim)).padStart(2,"0")}
+$("go").onclick=async()=>{
   const a=parseFloat($("amt").value);
   if(!a||a<=0){$("amt").focus();return}
-  const x=$("xx").checked;addEx({amount:a,note:$("nt").value.trim(),cat:x?"x":$("cs").value,x:x,date:$("dt").value||today(),by:$("by").value});$("xx").checked=false;$("cs").style.display="";
-  $("amt").value="";$("nt").value="";$("amt").focus();
+  const x=$("xx").checked,n=Math.max(1,Math.min(60,parseInt($("np").value)||1)),dt=$("dt").value||today(),g=String(Date.now());
+  const base={note:$("nt").value.trim(),cat:x?"x":$("cs").value,x:x,by:$("by").value};
+  if(n===1)await addEx({...base,amount:a,date:dt});
+  else{
+    const each=Math.floor(a*100/n)/100;
+    for(let k=0;k<n;k++)await addEx({...base,amount:k<n-1?each:Math.round((a-each*(n-1))*100)/100,date:addM(dt,k),g:g,p:k+1,pn:n});
+  }
+  $("xx").checked=false;$("cs").style.display="";$("amt").value="";$("nt").value="";$("np").value="";$("amt").focus();
 };
 $("xx").onchange=()=>{$("cs").style.display=$("xx").checked?"none":""};
 $("pv").onclick=()=>shift(-1);$("nx").onclick=()=>shift(1);
