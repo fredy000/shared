@@ -149,12 +149,12 @@ const DEF={names:["פרדי","נויה"],each:6800,cats:[
 const KW={rent:"שכירות|שכר דירה",bills:"ארנונה|חשמל|מים|גז|חברת החשמל",vaad:"ועד",super:"סופר|שופרסל|רמי לוי|מגה|ויקטורי|יוחננוף|טיב טעם|אושר עד|קשת טעמים|סופר-פארם|סופר פארם|בית",gym:"הולמס|חדר כושר|מנוי",save:"חיסכון|כרית",fixed:"ביטוח|טלפון|אינטרנט|סלולר",events:"חתונה|בר מצווה|בת מצווה|ברית|מתנה|יום הולדת|אירוע|משפחה"};
 const COL=["#6c4cf1","#22b07d","#f5a524","#0ea5e9","#ef4565","#14b8a6","#a855f7","#f97316","#84cc16","#ec4899"];
 const TM={rent:"fixed",fixed:"fixed",bills:"fixed",vaad:"fixed",gym:"fixed",super:"var",save:"cushion"};
-let S=JSON.parse(JSON.stringify(DEF)),EX=[],mon=new Date().toISOString().slice(0,7),DB=null,LS=false;
+let S=JSON.parse(JSON.stringify(DEF)),EX=[],mon=(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))(new Date()),DB=null,LS=false;
 const $=i=>document.getElementById(i);
 const f=n=>Math.round(n).toLocaleString("he-IL")+" ₪";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const MN=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 
 function lsGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -212,8 +212,8 @@ function render(){
   const bc=$("by").value;
   $("by").innerHTML=S.names.map(n=>`<option>${esc(n)}</option>`).join("");
   if(bc)$("by").value=bc;
-  const now=new Date(),isCur=mon===now.toISOString().slice(0,7);
-  const dl=new Date(+y,+m,0).getDate()-now.getDate()+1;
+  const now=new Date(),td=today(),isCur=mon===td.slice(0,7);
+  const dl=new Date(+y,+m,0).getDate()-now.getDate();
   $("cats").innerHTML=cs.map((c,i)=>{
     const s=sum(reg.filter(e=>e.cat===c.id)),b=+c.b,l=b-s,sv=c.t==="cushion"||c.t==="goal";
     let tot=s,tg=b;if(c.t==="goal"){tot=sum(EX.filter(e=>e.cat===c.id&&!e.x));tg=+c.target||0}
@@ -224,7 +224,11 @@ function render(){
     const rt=c.t==="goal"?"נחסך "+f(tot):sv?"הופקד "+f(s):(l<0?"חריגה "+f(-l):"נשאר "+f(l));
     const r1=sv?"החודש "+f(s):"הוצאנו "+f(s),r2=c.t==="goal"?"יעד "+f(tg):"מתוך "+f(b);
     let tip="";const ux=sum(unu.filter(e=>e.cat===c.id));
-    if(c.t==="var"&&isCur&&b>0)tip=l>0?`⏳ נשארו ${dl} ימים ו־${f(l)} ל${esc(c.n)} · כ־${f(l/dl)} ליום`:"🚫 עברתם את התקציב";
+    if(c.t==="var"&&isCur&&b>0){
+      if(l<0)tip="🚫 עברתם את התקציב";else if(l===0)tip="✅ ניצלתם את כל התקציב";
+      else{const st=sum(reg.filter(e=>e.cat===c.id&&e.date===td)),al=(l+st)/(dl+1),tl=al-st;
+        tip=`⏳ ${dl>0?"נשארו "+dl+" ימים בחודש":"זה היום האחרון בחודש"} · ${f(l)} ל${esc(c.n)}<br>📅 היום: ${tl>=0?"נשאר "+f(tl):"חרגתם ב־"+f(-tl)} מתוך ${f(al)} ליום`+(dl>0?`<br>מחר ואילך: כ־${f(l/dl)} ליום`:"")}
+    }
     return `<div class="cat ${cls}"><div class="top"><span>${c.e} ${esc(c.n)}</span><span class="left" style="color:${pr>1?"var(--bad)":"var(--ok)"}">${rt}</span></div>
     <div class="bar"><i style="width:${pc}%;background:${col}"></i></div>
     <div class="row"><span>${r1}</span><span>${r2}</span></div>${ux>0?`<div class="note">⚡ חריגות בקטגוריה: ${f(ux)}</div>`:""}${tip?`<div class="tip">${tip}</div>`:""}</div>`}).join("");
