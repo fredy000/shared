@@ -121,6 +121,13 @@ dialog{max-height:90vh;overflow:auto}
 <div class="note" id="sync" style="text-align:center;margin-top:14px"></div>
 </div>
 
+<dialog id="ed">
+  <h2 style="margin-top:0">✏️ עריכת הוצאה</h2>
+  <input id="en" placeholder="שם ההוצאה" style="margin-bottom:8px">
+  <select id="ec" style="margin-bottom:14px"></select>
+  <div style="display:flex;gap:8px"><button class="btn pri" id="es" style="flex:1">שמירה</button><button class="btn" id="ex2">ביטול</button></div>
+</dialog>
+
 <dialog id="dg">
   <h2 style="margin-top:0">⚙️ הגדרות</h2>
   <div class="srow" style="grid-template-columns:1fr 1fr"><input id="n1" placeholder="שם 1"><input id="n2" placeholder="שם 2"></div>
@@ -223,7 +230,8 @@ function render(){
   $("ls").innerHTML=ex.length?ex.map(e=>{
     const c=e.x?{e:"⚡",n:"חריגה"}:(cs.find(c=>c.id===e.cat)||{e:"❓",n:"אחר"});
     const d=e.date.split("-");
-    return `<div class="it"><div class="em">${c.e}</div><div class="m"><div>${esc(e.note||c.n)}${e.x?'<span class="tag">חריגה</span>':""}${e.pn?`<span class="tag" style="background:var(--pri)">תשלום ${e.p}/${e.pn}</span>`:""}</div><small>${d[2]}/${d[1]} · ${esc(c.n)} · ${esc(e.by||"")}</small></div><b>${f(e.amount)}</b><button class="x" data-d="${e.id}">✕</button></div>`}).join(""):`<div class="empty">עוד אין הוצאות החודש 🎉</div>`;
+    return `<div class="it"><div class="em">${c.e}</div><div class="m"><div>${esc(e.note||c.n)}${e.x?'<span class="tag">חריגה</span>':""}${e.pn?`<span class="tag" style="background:var(--pri)">תשלום ${e.p}/${e.pn}</span>`:""}</div><small>${d[2]}/${d[1]} · ${esc(c.n)} · ${esc(e.by||"")}</small></div><b>${f(e.amount)}</b><button class="x" data-e="${e.id}">✏️</button><button class="x" data-d="${e.id}">✕</button></div>`}).join(""):`<div class="empty">עוד אין הוצאות החודש 🎉</div>`;
+  document.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>editEx(b.dataset.e));
   document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>delAsk(b.dataset.d));
   const up=EX.filter(e=>e.pn&&(e.date||"").slice(0,7)>mon).sort((a,b)=>a.date.localeCompare(b.date)),gm={};
   up.forEach(e=>{const k=e.date.slice(0,7);(gm[k]=gm[k]||[]).push(e)});
@@ -266,6 +274,13 @@ $("go").onclick=async()=>{
   }
   $("xx").checked=false;$("cs").style.display="";$("amt").value="";$("nt").value="";$("np").value="";$("amt").focus();
 };
+async function updEx(id,ch){const e=EX.find(x=>x.id===id);if(e)Object.assign(e,ch);render();try{await fetch(FB+"/expenses/"+id+".json",{method:"PATCH",body:JSON.stringify(ch)})}catch(x){}pull()}
+let EID=null;
+function editEx(id){const e=EX.find(x=>x.id===id);if(!e)return;EID=id;$("en").value=e.note||"";
+  $("ec").innerHTML=(e.x?'<option value="x">⚡ חריגה (ללא קטגוריה)</option>':"")+S.cats.map(c=>`<option value="${c.id}">${c.e} ${esc(c.n)}</option>`).join("");
+  $("ec").value=e.cat;$("ed").showModal()}
+$("es").onclick=()=>{updEx(EID,{note:$("en").value.trim(),cat:$("ec").value});$("ed").close()};
+$("ex2").onclick=()=>$("ed").close();
 function setBal(){const v=parseFloat($("bal").value);if(isNaN(v))return;S.bal=v;saveSettings()}
 $("balb").onclick=setBal;$("bal").onkeydown=e=>{if(e.key==="Enter")setBal()};
 $("xx").onchange=()=>{$("cs").style.display=$("xx").checked?"none":""};
