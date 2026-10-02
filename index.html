@@ -85,6 +85,16 @@ dialog{max-height:90vh;overflow:auto}
 <section class="kpis" id="kpis"></section>
 <section class="card" style="padding:12px 16px"><div class="nrm" id="nrm"></div></section>
 
+<section class="card" id="acc">
+  <h2>💳 מצב החשבון</h2>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span>יתרה נוכחית בחשבון:</span>
+    <input id="bal" type="number" step="0.01" inputmode="decimal" placeholder="₪" style="width:140px">
+    <button class="btn" id="balb" style="padding:6px 12px;font-size:13px">עדכון יתרה</button>
+  </div>
+  <div id="accv" style="margin-top:12px;display:grid;gap:6px"></div>
+</section>
+
 <section class="card">
   <h2>➕ הוצאה חדשה</h2>
   <div class="add">
@@ -128,7 +138,7 @@ const DEF={names:["פרדי","נויה"],each:6800,cats:[
 {id:"bills",e:"💡",n:"ארנונה + חשמל + מים + גז",b:905,t:"fixed"},{id:"vaad",e:"🏢",n:"ועד בית",b:360,t:"fixed"},
 {id:"super",e:"🛒",n:"סופר + דברים לבית",b:2300,t:"var"},{id:"gym",e:"🏋️",n:"הולמס פלייס",b:433,t:"fixed"},
 {id:"save",e:"💰",n:"חיסכון / כרית בחשבון",b:500,t:"cushion"}]};
-const KW={rent:"שכירות|שכר דירה",bills:"ארנונה|חשמל|מים|גז|חברת החשמל",vaad:"ועד",super:"סופר|שופרסל|רמי לוי|מגה|ויקטורי|יוחננוף|טיב טעם|אושר עד|קשת טעמים|סופר-פארם|סופר פארם|בית",gym:"הולמס|חדר כושר|מנוי",save:"חיסכון|כרית",fixed:"ביטוח|טלפון|אינטרנט|סלולר"};
+const KW={rent:"שכירות|שכר דירה",bills:"ארנונה|חשמל|מים|גז|חברת החשמל",vaad:"ועד",super:"סופר|שופרסל|רמי לוי|מגה|ויקטורי|יוחננוף|טיב טעם|אושר עד|קשת טעמים|סופר-פארם|סופר פארם|בית",gym:"הולמס|חדר כושר|מנוי",save:"חיסכון|כרית",fixed:"ביטוח|טלפון|אינטרנט|סלולר",events:"חתונה|בר מצווה|בת מצווה|ברית|מתנה|יום הולדת|אירוע|משפחה"};
 const COL=["#6c4cf1","#22b07d","#f5a524","#0ea5e9","#ef4565","#14b8a6","#a855f7","#f97316","#84cc16","#ec4899"];
 const TM={rent:"fixed",fixed:"fixed",bills:"fixed",vaad:"fixed",gym:"fixed",super:"var",save:"cushion"};
 let S=JSON.parse(JSON.stringify(DEF)),EX=[],mon=new Date().toISOString().slice(0,7),DB=null,LS=false;
@@ -156,6 +166,7 @@ async function saveSettings(){render();try{await fetch(FB+"/settings.json",{meth
 async function addEx(x){try{await fetch(FB+"/expenses.json",{method:"POST",body:JSON.stringify(x)})}catch(e){}pull()}
 async function delEx(id){EX=EX.filter(e=>e.id!==id);render();try{await fetch(FB+"/expenses/"+id+".json",{method:"DELETE"})}catch(e){}pull()}
 function render(){
+  if(!S.ev){S.ev=1;if(!S.cats.some(c=>c.id==="events"))S.cats.push({id:"events",e:"🎉",n:"אירועים, מתנות ומשפחה",b:0,t:"var"})}
   S.cats.forEach(c=>{if(!c.t)c.t=TM[c.id]||"var"});
   const [y,m]=mon.split("-");$("mn").textContent=MN[+m-1]+" "+y;
   const cs=S.cats,inc=S.each*2;
@@ -173,8 +184,20 @@ function render(){
   $("remsub").textContent="מתוך "+f(inc)+" בחודש (כולל קבועים והפקדות לחיסכון)";
   $("pct").textContent=Math.round(p)+"%";
   $("ring").style.background=`conic-gradient(#fff ${p*3.6}deg,rgba(255,255,255,.28) 0)`;
-  $("kpis").innerHTML=[["💵 נכנס החודש",inc],["📌 מיועד לקבועים",fixedB],["💸 הוצא בפועל",actual],["🎯 נצבר לחשבונות עתידיים",goals],["🛟 נשמר בכרית",cush]].map(k=>`<div class="kpi"><span>${k[0]}</span><b>${f(k[1])}</b></div>`).join("");
+  $("kpis").innerHTML=[["💵 נכנס החודש",inc],["📌 מיועד לקבועים",fixedB],["💸 הוצא בפועל",actual],["🎯 נצבר לחשבונות עתידיים",goals],["🛌 נשמר בכרית",cush]].map(k=>`<div class="kpi"><span>${k[0]}</span><b>${f(k[1])}</b></div>`).join("");
   $("nrm").innerHTML=`<span>🔁 חודש רגיל: <b>${f(fixedS+varS)}</b></span><span>⚡ חריגות: <b>${f(unuS)}</b></span><span>סה״כ כולל חריגות: <b>${f(actual)}</b></span>`;
+  const bal=S.bal==null?null:+S.bal,f2=n=>n.toLocaleString("he-IL",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₪";
+  if(document.activeElement!==$("bal")&&bal!=null)$("bal").value=bal;
+  const row=(a,b,c)=>`<div style="display:flex;justify-content:space-between;gap:10px"><span>${a}</span><b${c?` style="color:${c}"`:""}>${b}</b></div>`;
+  let ah="";
+  if(bal==null)ah=`<div class="note">הזינו את היתרה הנוכחית בחשבון ולחצו "עדכון יתרה" כדי לראות כמה צריך להעביר.</div>`;
+  else{
+    const need=Math.round((left-bal)*100)/100;
+    ah=row("יתרה נוכחית",f2(bal))+row("נשאר בתקציב החודש",f2(left));
+    if(need>0){const h2=Math.ceil(need*100/2)/100;ah+=row("חסר להשלמת התקציב",f2(need),"var(--bad)")+row("כל אחד צריך להעביר",f2(h2))+`<div class="note">${esc(S.names[1])}: ${f2(h2)} | ${esc(S.names[0])}: ${f2(h2)}</div>`}
+    else ah+=`<div style="color:var(--ok);font-weight:700">✅ אין צורך להעביר כסף</div>`+row("יש בחשבון מעבר לסכום הדרוש",f2(-need));
+  }
+  $("accv").innerHTML=ah;
   const cur=$("cs").value;
   $("cs").innerHTML=cs.map(c=>`<option value="${c.id}">${c.e} ${esc(c.n)}</option>`).join("");
   if(cur)$("cs").value=cur;
@@ -193,7 +216,7 @@ function render(){
     const rt=c.t==="goal"?"נחסך "+f(tot):sv?"הופקד "+f(s):(l<0?"חריגה "+f(-l):"נשאר "+f(l));
     const r1=sv?"החודש "+f(s):"הוצאנו "+f(s),r2=c.t==="goal"?"יעד "+f(tg):"מתוך "+f(b);
     let tip="";
-    if(c.t==="var"&&isCur)tip=l>0?`⏳ נשארו ${dl} ימים ו־${f(l)} ל${esc(c.n)} · כ־${f(l/dl)} ליום`:"🚫 עברתם את התקציב";
+    if(c.t==="var"&&isCur&&b>0)tip=l>0?`⏳ נשארו ${dl} ימים ו־${f(l)} ל${esc(c.n)} · כ־${f(l/dl)} ליום`:"🚫 עברתם את התקציב";
     return `<div class="cat ${cls}"><div class="top"><span>${c.e} ${esc(c.n)}</span><span class="left" style="color:${pr>1?"var(--bad)":"var(--ok)"}">${rt}</span></div>
     <div class="bar"><i style="width:${pc}%;background:${col}"></i></div>
     <div class="row"><span>${r1}</span><span>${r2}</span></div>${tip?`<div class="tip">${tip}</div>`:""}</div>`}).join("");
@@ -243,6 +266,8 @@ $("go").onclick=async()=>{
   }
   $("xx").checked=false;$("cs").style.display="";$("amt").value="";$("nt").value="";$("np").value="";$("amt").focus();
 };
+function setBal(){const v=parseFloat($("bal").value);if(isNaN(v))return;S.bal=v;saveSettings()}
+$("balb").onclick=setBal;$("bal").onkeydown=e=>{if(e.key==="Enter")setBal()};
 $("xx").onchange=()=>{$("cs").style.display=$("xx").checked?"none":""};
 $("pv").onclick=()=>shift(-1);$("nx").onclick=()=>shift(1);
 function shift(d){let [y,m]=mon.split("-").map(Number);m+=d;if(m<1){m=12;y--}if(m>12){m=1;y++}mon=y+"-"+String(m).padStart(2,"0");render()}
@@ -262,7 +287,7 @@ function drawSet(){
 $("set").onclick=()=>{T=JSON.parse(JSON.stringify(S.cats));$("n1").value=S.names[0];$("n2").value=S.names[1];$("ct").value=S.each;drawSet();$("dg").showModal()};
 $("ac").onclick=()=>{T.push({id:"c"+Date.now(),e:"📌",n:"קטגוריה חדשה",b:0,t:"var"});drawSet()};
 $("cl").onclick=()=>$("dg").close();
-$("sv").onclick=()=>{S={names:[$("n1").value||"פרדי",$("n2").value||"נויה"],each:+$("ct").value||0,cats:T};saveSettings();$("dg").close()};
+$("sv").onclick=()=>{S={...S,names:[$("n1").value||"פרדי",$("n2").value||"נויה"],each:+$("ct").value||0,cats:T};saveSettings();$("dg").close()};
 init();
 </script>
 </body>
