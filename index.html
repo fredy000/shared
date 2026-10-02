@@ -223,13 +223,13 @@ function render(){
     const col=sv||cls==="ok"?"var(--ok)":over?"var(--bad)":COL[i%COL.length];
     const rt=c.t==="goal"?"נחסך "+f(tot):sv?"הופקד "+f(s):(l<0?"חריגה "+f(-l):"נשאר "+f(l));
     const r1=sv?"החודש "+f(s):"הוצאנו "+f(s),r2=c.t==="goal"?"יעד "+f(tg):"מתוך "+f(b);
-    let tip="";
+    let tip="";const ux=sum(unu.filter(e=>e.cat===c.id));
     if(c.t==="var"&&isCur&&b>0)tip=l>0?`⏳ נשארו ${dl} ימים ו־${f(l)} ל${esc(c.n)} · כ־${f(l/dl)} ליום`:"🚫 עברתם את התקציב";
     return `<div class="cat ${cls}"><div class="top"><span>${c.e} ${esc(c.n)}</span><span class="left" style="color:${pr>1?"var(--bad)":"var(--ok)"}">${rt}</span></div>
     <div class="bar"><i style="width:${pc}%;background:${col}"></i></div>
-    <div class="row"><span>${r1}</span><span>${r2}</span></div>${tip?`<div class="tip">${tip}</div>`:""}</div>`}).join("");
+    <div class="row"><span>${r1}</span><span>${r2}</span></div>${ux>0?`<div class="note">⚡ חריגות בקטגוריה: ${f(ux)}</div>`:""}${tip?`<div class="tip">${tip}</div>`:""}</div>`}).join("");
   $("ls").innerHTML=ex.length?ex.map(e=>{
-    const c=e.x?{e:"⚡",n:"חריגה"}:(cs.find(c=>c.id===e.cat)||{e:"❓",n:"אחר"});
+    const c=cs.find(c=>c.id===e.cat)||(e.x?{e:"⚡",n:"חריגה"}:{e:"❓",n:"אחר"});
     const d=e.date.split("-");
     return `<div class="it"><div class="em">${c.e}</div><div class="m"><div>${esc(e.note||c.n)}${e.x?'<span class="tag">חריגה</span>':""}${e.pn?`<span class="tag" style="background:var(--pri)">תשלום ${e.p}/${e.pn}</span>`:""}</div><small>${d[2]}/${d[1]} · ${esc(c.n)} · ${esc(e.by||"")}</small></div><b>${f(e.amount)}</b><button class="x" data-e="${e.id}">✏️</button><button class="x" data-d="${e.id}">✕</button></div>`}).join(""):`<div class="empty">עוד אין הוצאות החודש 🎉</div>`;
   document.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>editEx(b.dataset.e));
@@ -259,7 +259,7 @@ function cmp(){
 }
 
 $("nt").oninput=()=>{
-  const t=$("nt").value;if(!t||$("xx").checked)return;
+  const t=$("nt").value;if(!t)return;
   for(const c of S.cats){const k=KW[c.id];if(k&&new RegExp(k).test(t)){$("cs").value=c.id;return}}
 };
 function addM(d,k){const [y,m,dd]=d.split("-").map(Number),t=new Date(y,m-1+k,1),dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(Math.min(dd,dim)).padStart(2,"0")}
@@ -267,7 +267,7 @@ $("go").onclick=async()=>{
   const a=parseFloat($("amt").value);
   if(!a||a<=0){$("amt").focus();return}
   const x=$("xx").checked,n=Math.max(1,Math.min(60,parseInt($("np").value)||1)),dt=$("dt").value||today(),g=String(Date.now());
-  const base={note:$("nt").value.trim(),cat:x?"x":$("cs").value,x:x,by:$("by").value};
+  const base={note:$("nt").value.trim(),cat:$("cs").value,x:x,by:$("by").value};
   if(n===1)await addEx({...base,amount:a,date:dt});
   else{
     const each=Math.floor(a*100/n)/100;
@@ -278,13 +278,13 @@ $("go").onclick=async()=>{
 async function updEx(id,ch){const e=EX.find(x=>x.id===id);if(e)Object.assign(e,ch);render();try{await fetch(FB+"/expenses/"+id+".json",{method:"PATCH",body:JSON.stringify(ch)})}catch(x){}pull()}
 let EID=null;
 function editEx(id){const e=EX.find(x=>x.id===id);if(!e)return;EID=id;$("en").value=e.note||"";
-  $("ec").innerHTML=(e.x?'<option value="x">⚡ חריגה (ללא קטגוריה)</option>':"")+S.cats.map(c=>`<option value="${c.id}">${c.e} ${esc(c.n)}</option>`).join("");
+  $("ec").innerHTML=(e.cat==="x"?'<option value="x">⚡ חריגה (ללא קטגוריה)</option>':"")+S.cats.map(c=>`<option value="${c.id}">${c.e} ${esc(c.n)}</option>`).join("");
   $("ec").value=e.cat;$("ed").showModal()}
 $("es").onclick=()=>{updEx(EID,{note:$("en").value.trim(),cat:$("ec").value});$("ed").close()};
 $("ex2").onclick=()=>$("ed").close();
 function setBal(){const v=parseFloat($("bal").value);if(isNaN(v))return;S.bal=v;saveSettings()}
 $("balb").onclick=setBal;$("bal").onkeydown=e=>{if(e.key==="Enter")setBal()};
-$("xx").onchange=()=>{$("cs").style.display=$("xx").checked?"none":""};
+
 $("pv").onclick=()=>shift(-1);$("nx").onclick=()=>shift(1);
 function shift(d){let [y,m]=mon.split("-").map(Number);m+=d;if(m<1){m=12;y--}if(m>12){m=1;y++}mon=y+"-"+String(m).padStart(2,"0");render()}
 
