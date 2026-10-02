@@ -226,7 +226,7 @@ function render(){
     let tip="";const ux=sum(unu.filter(e=>e.cat===c.id));
     if(c.t==="var"&&isCur&&b>0){
       if(l<0)tip="🚫 עברתם את התקציב";else if(l===0)tip="✅ ניצלתם את כל התקציב";
-      else tip=`⏳ ${dl>0?"נשארו "+dl+" ימים בחודש":"זה היום האחרון בחודש"} · ${f(l)} ל${esc(c.n)}`+(dl>0?`<br>${f(l/dl)} ליום`:"");
+      else{const st=sum(reg.filter(e=>e.cat===c.id&&e.date===td)),tl=(l+st)/Math.max(dl,1)-st;tip=`⏳ ${dl>0?"נשארו "+dl+" ימים בחודש":"זה היום האחרון בחודש"} · ${f(l)} ל${esc(c.n)}<br>📅 ${tl>=0?"נשאר להיום: "+f(tl):"חרגתם היום ב־"+f(-tl)}`}
     }
     return `<div class="cat ${cls}"><div class="top"><span>${c.e} ${esc(c.n)}</span><span class="left" style="color:${pr>1?"var(--bad)":"var(--ok)"}">${rt}</span></div>
     <div class="bar"><i style="width:${pc}%;background:${col}"></i></div>
