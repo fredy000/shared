@@ -54,6 +54,7 @@ dialog::backdrop{background:rgba(10,8,30,.5)}
 .kpi{background:var(--card);border-radius:16px;padding:12px;box-shadow:var(--sh)}
 .kpi span{display:block;font-size:12px;color:var(--mut)}.kpi b{font-size:18px}
 .cat.warn{background:rgba(245,165,36,.16);outline:2px solid var(--warn)}
+.cat.ok{background:rgba(34,176,125,.14);outline:2px solid var(--ok)}
 .cat.bad{background:rgba(239,69,101,.14);outline:2px solid var(--bad)}
 .tip{font-size:13px;margin-top:8px;font-weight:500}
 .tag{font-size:11px;background:var(--warn);color:#fff;border-radius:8px;padding:1px 7px;margin-inline-start:6px}
@@ -218,8 +219,8 @@ function render(){
     let tot=s,tg=b;if(c.t==="goal"){tot=sum(EX.filter(e=>e.cat===c.id&&!e.x));tg=+c.target||0}
     const pc=tg?Math.min(100,tot/tg*100):(s&&!sv?100:0);
     const pr=sv?0:(b?s/b:(s?2:0));
-    const cls=pr>1?"bad":pr>=.8?"warn":"";
-    const col=sv?"var(--ok)":pr>1?"var(--bad)":pr>=.8?"var(--warn)":COL[i%COL.length];
+    const over=!sv&&s>b+.005,cls=over?"bad":(!sv&&b>0&&Math.abs(s-b)<=.005)?"ok":"";
+    const col=sv||cls==="ok"?"var(--ok)":over?"var(--bad)":COL[i%COL.length];
     const rt=c.t==="goal"?"נחסך "+f(tot):sv?"הופקד "+f(s):(l<0?"חריגה "+f(-l):"נשאר "+f(l));
     const r1=sv?"החודש "+f(s):"הוצאנו "+f(s),r2=c.t==="goal"?"יעד "+f(tg):"מתוך "+f(b);
     let tip="";
