@@ -226,8 +226,7 @@ function render(){
     let tip="";const ux=sum(unu.filter(e=>e.cat===c.id));
     if(c.t==="var"&&isCur&&b>0){
       if(l<0)tip="🚫 עברתם את התקציב";else if(l===0)tip="✅ ניצלתם את כל התקציב";
-      else{const st=sum(reg.filter(e=>e.cat===c.id&&e.date===td)),al=(l+st)/(dl+1),tl=al-st;
-        tip=`⏳ ${dl>0?"נשארו "+dl+" ימים בחודש":"זה היום האחרון בחודש"} · ${f(l)} ל${esc(c.n)}<br>📅 היום: ${tl>=0?"נשאר "+f(tl):"חרגתם ב־"+f(-tl)} מתוך ${f(al)} ליום`+(dl>0?`<br>מחר ואילך: כ־${f(l/dl)} ליום`:"")}
+      else tip=`⏳ ${dl>0?"נשארו "+dl+" ימים בחודש":"זה היום האחרון בחודש"} · ${f(l)} ל${esc(c.n)}`+(dl>0?`<br>${f(l/dl)} ליום`:"");
     }
     return `<div class="cat ${cls}"><div class="top"><span>${c.e} ${esc(c.n)}</span><span class="left" style="color:${pr>1?"var(--bad)":"var(--ok)"}">${rt}</span></div>
     <div class="bar"><i style="width:${pc}%;background:${col}"></i></div>
