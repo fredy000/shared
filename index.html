@@ -139,29 +139,20 @@ const today=()=>new Date().toISOString().slice(0,10);
 function lsGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 
-async function init(){
-  $("dt").value=today();
-  render();
-  let cl=null;try{cl=await window.claude.use("db")}catch(e){}
-  if(cl){
-    DB=cl;
-    DB.doc("app/settings").onSnapshot(s=>{if(s.exists&&s.data().json){try{S=JSON.parse(s.data().json);if(S.names[0]==="אני")S.names=["פרדי","נויה"]}catch(e){}}render()});
-    DB.collection("expenses").onSnapshot(q=>{EX=q.docs.map(d=>({id:d.id,...d.data()}));render()},()=>fallback());
-  }else fallback();
+const FB="https://shared-85cc3-default-rtdb.europe-west1.firebasedatabase.app";
+async function pull(){
+  try{
+    const [e,st]=await Promise.all([fetch(FB+"/expenses.json").then(r=>r.json()),fetch(FB+"/settings.json").then(r=>r.json())]);
+    if(e&&e.error)throw new Error(e.error);
+    EX=e?Object.entries(e).map(([id,v])=>({id,...v})):[];
+    if(st&&st.json){try{S=JSON.parse(st.json)}catch(x){}}
+    $("sync").textContent="";render();
+  }catch(x){$("sync").textContent="⚠️ אין חיבור ל-Firebase (בדקו חיבור ו-Rules)"}
 }
-function fallback(){
-  DB=null;LS=true;S=lsGet("bs",S);EX=lsGet("bx",[]);render();
-}
-function saveSettings(){if(DB)DB.doc("app/settings").set({json:JSON.stringify(S)}).catch(()=>{});else lsSet("bs",S);render()}
-function addEx(x){
-  if(DB)DB.collection("expenses").add(x).catch(()=>{});
-  else{x.id="l"+Date.now();EX.push(x);lsSet("bx",EX);render()}
-}
-function delEx(id){
-  if(DB)DB.collection("expenses").doc(id).delete().catch(()=>{});
-  else{EX=EX.filter(e=>e.id!==id);lsSet("bx",EX);render()}
-}
-
+function init(){$("dt").value=today();render();pull();setInterval(pull,5000)}
+async function saveSettings(){render();try{await fetch(FB+"/settings.json",{method:"PUT",body:JSON.stringify({json:JSON.stringify(S)})})}catch(e){}pull()}
+async function addEx(x){try{await fetch(FB+"/expenses.json",{method:"POST",body:JSON.stringify(x)})}catch(e){}pull()}
+async function delEx(id){EX=EX.filter(e=>e.id!==id);render();try{await fetch(FB+"/expenses/"+id+".json",{method:"DELETE"})}catch(e){}pull()}
 function render(){
   S.cats.forEach(c=>{if(!c.t)c.t=TM[c.id]||"var"});
   const [y,m]=mon.split("-");$("mn").textContent=MN[+m-1]+" "+y;
